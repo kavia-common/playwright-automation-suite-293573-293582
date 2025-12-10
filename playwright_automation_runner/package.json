@@ -2,6 +2,10 @@
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
+    "ui": "playwright test --ui",
+    "ui:chromium": "playwright test --ui --project=chromium",
+    "ui:firefox": "playwright test --ui --project=firefox",
+    "ui:webkit": "playwright test --ui --project=webkit",
     "show-report": "playwright show-report"
   },
   "devDependencies": {

@@ -33,12 +33,33 @@ npm run test:ui
 ```
 This runs `playwright test --ui`, which provides a visual interface to explore tests, view traces, and debug steps.
 
+## Using Playwright UI
+
+Playwright UI mode provides an interactive interface for running, debugging, and exploring your tests. It's designed for local development and debugging workflows.
+
+### Launch UI for All Browsers
+```bash
+npm run ui
+```
+
+### Launch UI for Specific Browsers
+Run the UI with a specific browser project:
+```bash
+npm run ui:chromium   # Run UI with Chromium only
+npm run ui:firefox    # Run UI with Firefox only
+npm run ui:webkit     # Run UI with WebKit only
+```
+
+**Note:** The Playwright UI is intended for interactive local test runs. For CI/CD pipelines and automated reporting, use `npm run test` which generates the standard HTML report.
+
 ## Viewing Reports
 
 Playwright generates an HTML report after test execution. To view the report in your browser:
 ```bash
 npm run show-report
 ```
+
+The HTML report is separate from the UI mode and provides a comprehensive overview of test results, including screenshots, traces, and detailed logs.
 
 ## Web Server Configuration & Port 3000
 
