@@ -1,81 +1,98 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Minimal, idempotent Playwright scaffolding matching project's module type
-WS="/home/kavia/workspace/code-generation/playwright-automation-suite-293573-293582/playwright_automation_runner"
-cd "$WS"
-mkdir -p "$WS/.artifacts" "$WS/tests" "$WS/.artifacts/screenshots"
-# ensure node and npm available
-command -v node >/dev/null 2>&1 || { echo "node not found on PATH" >&2; exit 2; }
-command -v npm >/dev/null 2>&1 || { echo "npm not found on PATH" >&2; exit 2; }
-# init package.json if missing
-if [ ! -f "$WS/package.json" ]; then
-  npm init -y >/dev/null
-fi
-# detect module type safely
-type_field=$(node -e "try{const p=require('./package.json'); console.log(p.type||'') }catch(e){process.exit(0)}" 2>/dev/null || true)
-is_esm=false
-if [ "${type_field}" = "module" ]; then is_esm=true; fi
-# set test script only if absent
-existing_test_script=$(node -e "try{const p=require('./package.json'); console.log((p.scripts&&p.scripts.test)||'') }catch(e){console.log('') }" 2>/dev/null || true)
-if [ -z "${existing_test_script}" ]; then
-  npm pkg set scripts.test="playwright test" >/dev/null
-fi
-# write playwright config matching module type; backup existing file(s) if present
-if [ -f "$WS/playwright.config.js" ] || [ -f "$WS/playwright.config.mjs" ]; then
-  # backup any existing configs to avoid overwrite
-  ts=$(date +%s)
-  [ -f "$WS/playwright.config.js" ] && cp "$WS/playwright.config.js" "$WS/playwright.config.js.bak.$ts" 2>/dev/null || true
-  [ -f "$WS/playwright.config.mjs" ] && cp "$WS/playwright.config.mjs" "$WS/playwright.config.mjs.bak.$ts" 2>/dev/null || true
-else
-  if [ "$is_esm" = true ]; then
-    cat > "$WS/playwright.config.mjs" <<'CFG'
-// ESM Playwright config
-export default {
-  timeout: 30000,
-  testDir: 'tests',
-  use: { headless: true, screenshot: 'only-on-failure', video: 'retain-on-failure' },
-  outputDir: './.artifacts'
-};
-CFG
-  else
-    cat > "$WS/playwright.config.js" <<'CFG'
-/** @type {import('@playwright/test').PlaywrightTestConfig} */
-module.exports = {
-  timeout: 30000,
-  testDir: 'tests',
-  use: { headless: true, screenshot: 'only-on-failure', video: 'retain-on-failure' },
-  outputDir: './.artifacts'
-};
-CFG
-  fi
-fi
-# create sample test matching module type; backup existing test files if present
-if [ -f "$WS/tests/example.spec.js" ] || [ -f "$WS/tests/example.spec.mjs" ]; then
-  ts=$(date +%s)
-  [ -f "$WS/tests/example.spec.js" ] && cp "$WS/tests/example.spec.js" "$WS/tests/example.spec.js.bak.$ts" 2>/dev/null || true
-  [ -f "$WS/tests/example.spec.mjs" ] && cp "$WS/tests/example.spec.mjs" "$WS/tests/example.spec.mjs.bak.$ts" 2>/dev/null || true
-else
-  if [ "$is_esm" = true ]; then
-    cat > "$WS/tests/example.spec.mjs" <<'TS'
-import { test, expect } from '@playwright/test';
 
-test('basic page', async ({ page }) => {
-  await page.goto('https://example.com');
-  await expect(page).toHaveTitle(/Example Domain/);
+WORKSPACE="/home/kavia/workspace/code-generation/playwright-automation-suite-293573-293582/playwright_automation_runner"
+cd "$WORKSPACE"
+mkdir -p "$WORKSPACE"
+
+# Verify node and npm (require Node >=18)
+if ! command -v node >/dev/null 2>&1; then
+  echo "ERROR: node is not installed or not on PATH. Install Node.js v18+." >&2
+  exit 2
+fi
+if ! command -v npm >/dev/null 2>&1; then
+  echo "ERROR: npm is not installed or not on PATH. Install npm for Node.js." >&2
+  exit 3
+fi
+NODE_VERSION=$(node -v | sed 's/^v//')
+NODE_MAJOR=$(printf "%s" "$NODE_VERSION" | cut -d. -f1)
+if [ "${NODE_MAJOR:-0}" -lt 18 ]; then
+  echo "ERROR: Node.js v18+ required, found v$NODE_VERSION" >&2
+  exit 4
+fi
+
+# Persist npm global bin to /etc/profile.d for future shells (idempotent)
+NPM_GLOBAL_BIN=$(npm bin -g 2>/dev/null || true)
+if [ -n "$NPM_GLOBAL_BIN" ]; then
+  PROFILE_SH="/etc/profile.d/playwright_env.sh"
+  sudo mkdir -p /etc/profile.d
+  sudo tee "$PROFILE_SH" >/dev/null <<PROFILE
+# Added by scaffold: ensure npm global bin is on PATH for future sessions
+if [ -d "$NPM_GLOBAL_BIN" ] && [[ ":$PATH:" != *":$NPM_GLOBAL_BIN:"* ]]; then
+  export PATH="$NPM_GLOBAL_BIN:$PATH"
+fi
+PROFILE
+  sudo chmod 644 "$PROFILE_SH"
+fi
+
+# Export NODE_ENV=development for this run only (do not persist)
+export NODE_ENV=development
+
+# Idempotent project files
+if [ ! -f package.json ]; then
+  cat > package.json <<'JSON'
+{
+  "name": "playwright-automation-suite",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  }
+}
+JSON
+  echo "# Note: add 'playwright' devDependency if you want guaranteed browser binaries and CLI parity" > .playwright_note
+fi
+
+if [ ! -f playwright.config.js ]; then
+  cat > playwright.config.js <<'JS'
+const { defineConfig } = require('@playwright/test');
+module.exports = defineConfig({
+  timeout: 30000,
+  use: { headless: true, viewport: { width: 1280, height: 720 } },
+  reporter: [['list']]
 });
-TS
-  else
-    cat > "$WS/tests/example.spec.js" <<'TS'
+JS
+fi
+
+mkdir -p tests
+if [ ! -f tests/example.spec.js ]; then
+  cat > tests/example.spec.js <<'TEST'
 const { test, expect } = require('@playwright/test');
 
-test('basic page', async ({ page }) => {
-  await page.goto('https://example.com');
+// Prefer a local URL (LOCAL_TEST_URL) to allow offline CI validation; fallback to example.com
+const LOCAL_URL = process.env.LOCAL_TEST_URL || 'https://example.com';
+
+test('simple page title', async ({ page }) => {
+  await page.goto(LOCAL_URL);
   await expect(page).toHaveTitle(/Example Domain/);
 });
-TS
-  fi
+TEST
 fi
-# Ensure artifacts directory exists
-mkdir -p "$WS/.artifacts"
-# Final validation: print created/updated files for traceability
-ls -la "$WS/playwright.config."* "$WS/tests/"* 2>/dev/null || true
+
+# Local index.html to enable offline validation when present
+if [ ! -f index.html ]; then
+  cat > index.html <<'HTML'
+<!doctype html>
+<html><head><title>Example Domain</title></head><body><h1>Example Domain</h1></body></html>
+HTML
+fi
+
+# Ensure file permissions are sane
+chmod -R a+rX "$WORKSPACE" || true
+
+# Done
+exit 0
