@@ -17,6 +17,11 @@ This project contains a suite for automating browser actions and UI testing usin
    npx playwright install
    ```
 
+   For container/server environments, use:
+   ```bash
+   npx playwright install --with-deps
+   ```
+
 ## Running Tests
 
 ### Standard Test Run
@@ -27,11 +32,19 @@ npm run test
 This runs the tests using the `playwright test` command.
 
 ### Interactive UI Mode
-To open the interactive Playwright UI for running and debugging tests:
+
+#### For Container/Server Environments (No Display)
+To open the Playwright UI in a browser-accessible web interface:
 ```bash
 npm run test:ui
 ```
-This runs `playwright test --ui`, which provides a visual interface to explore tests, view traces, and debug steps.
+This runs `playwright test --ui-host=0.0.0.0 --ui-port=3001`, which provides a web-based interface accessible at `http://localhost:3001` to explore tests, view traces, and debug steps. This mode works in headless server environments without requiring an X server.
+
+#### For Local Development (With Display)
+If you have a graphical display available, you can use the desktop UI:
+```bash
+npx playwright test --ui
+```
 
 ## Viewing Reports
 
@@ -49,3 +62,7 @@ The test suite is configured to run against a local application server.
 - **Reusing Existing Server**: The configuration includes `reuseExistingServer: true`.
   - If a server is already running on port 3000 (e.g., you started the app manually in another terminal), Playwright will use that instance instead of starting a new one.
   - This speeds up local development iteration by avoiding the overhead of restarting the server for every test run.
+
+## Container Startup
+
+When running in a container environment, the Playwright UI is served on port 3001 as a web interface that can be accessed through your browser without requiring a graphical display server (X server).
