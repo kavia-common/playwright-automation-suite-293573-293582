@@ -1,12 +1,78 @@
 {
+  "name": "playwright-automation-runner",
+  "version": "1.0.0",
+  "description": "Playwright automation test suite with comprehensive npm scripts",
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
+    
     "ui": "playwright test --ui",
     "ui:chromium": "playwright test --ui --project=chromium",
     "ui:firefox": "playwright test --ui --project=firefox",
     "ui:webkit": "playwright test --ui --project=webkit",
-    "show-report": "playwright show-report"
+    
+    "test:smoke": "playwright test --grep @smoke",
+    "test:e2e": "playwright test --grep @e2e",
+    "test:api": "playwright test --grep @api",
+    
+    "test:smoke:folder": "playwright test tests/smoke",
+    "test:e2e:folder": "playwright test tests/e2e",
+    "test:api:folder": "playwright test tests/api",
+    
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    
+    "test:headed": "playwright test --headed",
+    "test:headed:chromium": "playwright test --headed --project=chromium",
+    "test:headed:firefox": "playwright test --headed --project=firefox",
+    "test:headed:webkit": "playwright test --headed --project=webkit",
+    
+    "test:debug": "playwright test --debug",
+    "test:debug:chromium": "playwright test --debug --project=chromium",
+    "test:debug:firefox": "playwright test --debug --project=firefox",
+    "test:debug:webkit": "playwright test --debug --project=webkit",
+    
+    "test:smoke:chromium": "playwright test --grep @smoke --project=chromium",
+    "test:smoke:firefox": "playwright test --grep @smoke --project=firefox",
+    "test:smoke:webkit": "playwright test --grep @smoke --project=webkit",
+    
+    "test:e2e:chromium": "playwright test --grep @e2e --project=chromium",
+    "test:e2e:firefox": "playwright test --grep @e2e --project=firefox",
+    "test:e2e:webkit": "playwright test --grep @e2e --project=webkit",
+    
+    "test:api:chromium": "playwright test --grep @api --project=chromium",
+    "test:api:firefox": "playwright test --grep @api --project=firefox",
+    "test:api:webkit": "playwright test --grep @api --project=webkit",
+    
+    "test:smoke:headed": "playwright test --grep @smoke --headed",
+    "test:e2e:headed": "playwright test --grep @e2e --headed",
+    "test:api:headed": "playwright test --grep @api --headed",
+    
+    "ui:smoke": "playwright test --ui --grep @smoke",
+    "ui:e2e": "playwright test --ui --grep @e2e",
+    "ui:api": "playwright test --ui --grep @api",
+    
+    "report": "playwright show-report",
+    "report:open": "playwright show-report",
+    "show-report": "playwright show-report",
+    
+    "report:generate": "echo 'Reports are automatically generated after test runs in playwright-report/'",
+    
+    "install:browsers": "playwright install",
+    "install:browsers:chromium": "playwright install chromium",
+    "install:browsers:firefox": "playwright install firefox",
+    "install:browsers:webkit": "playwright install webkit",
+    "install:browsers:deps": "playwright install-deps",
+    
+    "clean:reports": "rm -rf playwright-report test-results reports",
+    "clean:cache": "rm -rf .cache node_modules/.cache",
+    "clean": "npm run clean:reports && npm run clean:cache",
+    
+    "list:tests": "playwright test --list",
+    "list:tests:smoke": "playwright test --list --grep @smoke",
+    "list:tests:e2e": "playwright test --list --grep @e2e",
+    "list:tests:api": "playwright test --list --grep @api"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
