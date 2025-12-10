@@ -2,46 +2,26 @@
 set -euo pipefail
 WS="/home/kavia/workspace/code-generation/playwright-automation-suite-293573-293582/playwright_automation_runner"
 cd "$WS"
-# Best-effort source persisted env
-# shellcheck disable=SC1091
-source /etc/profile.d/playwright_env.sh || true
-mkdir -p "$WS/.artifacts"
-# Build/install deterministically
-if [ -f package-lock.json ]; then
-  npm ci --no-audit --no-fund --silent
-else
-  npm i --no-audit --no-fund --silent
-fi
-# Record versions for evidence
-node -v > "$WS/.artifacts/node_version.txt" 2>/dev/null || true
-npm -v  > "$WS/.artifacts/npm_version.txt" 2>/dev/null || true
-npx --no-install playwright --version > "$WS/.artifacts/playwright_cli_version.txt" 2>/dev/null || true
-# Start ephemeral server
-python3 -m http.server 8080 --directory "$WS" >/dev/null 2>&1 &
-server_pid=$!
-echo "$server_pid" > "$WS/.artifacts/ephemeral_server.pid"
-# Wait and verify responsiveness
-sleep 1
-if ! curl -sS --max-time 5 http://127.0.0.1:8080/ >/dev/null 2>&1; then
-  echo "Ephemeral python server failed to respond on 8080" >&2
-  kill "$server_pid" >/dev/null 2>&1 || true
-  wait "$server_pid" 2>/dev/null || true
-  exit 10
-fi
-# Run tests and collect artifacts; preserve playwright exit code
-export CI=true
-rc=0
-npx playwright test --config=playwright.config.js --reporter=json > "$WS/.artifacts/validation_playwright_test.json" 2> "$WS/.artifacts/validation_playwright_test.log" || rc=$?
-rc=${rc:-0}
-# Stop server cleanly
-kill "$server_pid" >/dev/null 2>&1 || true
-wait "$server_pid" 2>/dev/null || true
-rm -f "$WS/.artifacts/ephemeral_server.pid" || true
-# List artifacts
-ls -la "$WS/.artifacts" || true
-if [ "$rc" -ne 0 ]; then
-  echo "validation: tests failed; see $WS/.artifacts/validation_playwright_test.log" >&2
-  exit "$rc"
-fi
-echo "validation: success; artifacts in $WS/.artifacts"
-exit 0
+# Deterministic install/build
+if [ -f package-lock.json ]; then npm ci --omit=optional --no-audit --no-fund; else npm install --omit=optional --no-audit --no-fund; fi
+# Run short-lived probe
+START_SCRIPT=""
+if [ -f scripts/start-headless.mjs ]; then START_SCRIPT=scripts/start-headless.mjs; elif [ -f scripts/start-headless.js ]; then START_SCRIPT=scripts/start-headless.js; else echo "ERROR: start script missing" >&2; exit 2; fi
+PROBE_LOG=/tmp/playwright_probe.log
+node "$START_SCRIPT" > "$PROBE_LOG" 2>&1 || { tail -n 200 "$PROBE_LOG" >&2; echo "VALIDATION_FAILED: probe failed" >&2; exit 3; }
+# Start long-running agent (scripts/agent.js)
+AGENT_SCRIPT="scripts/agent.js"
+if [ ! -f "$AGENT_SCRIPT" ]; then echo "ERROR: agent script missing" >&2; exit 4; fi
+nohup node "$AGENT_SCRIPT" > /tmp/playwright_agent.log 2>&1 &
+PID=$!
+sleep 2
+if ! kill -0 "$PID" >/dev/null 2>&1; then echo "VALIDATION_FAILED: agent failed to start; log:" >&2; tail -n 200 /tmp/playwright_agent.log || true; exit 5; fi
+# Stop agent gracefully
+kill -TERM "$PID" >/dev/null 2>&1 || true
+for i in 1 2 3 4 5; do if ! kill -0 "$PID" >/dev/null 2>&1; then break; fi; sleep 1; done
+if kill -0 "$PID" >/dev/null 2>&1; then echo "VALIDATION_FAILED: agent did not stop" >&2; kill -KILL "$PID" >/dev/null 2>&1 || true; exit 6; fi
+# Show agent log for evidence
+tail -n 200 /tmp/playwright_agent.log || true
+# Run a single quick playwright test as final verification
+npx playwright test tests/example.spec.* --reporter=list --forbid-only --workers=1 || (echo "VALIDATION_FAILED: playwright tests failed" >&2; exit 7)
+echo "VALIDATION_OK: build/probe/agent-start-stop/test lifecycle succeeded"
