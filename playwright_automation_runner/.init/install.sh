@@ -29,12 +29,6 @@ if ! command -v npx >/dev/null 2>&1 || ! npx playwright --version >/dev/null 2>&
 fi
 # install chromium and capture dependencies info
 npx playwright install --with-deps chromium >/dev/null
-npx playwright show-deps 2>&1 | tee "$WS/.artifacts/playwright_show_deps.txt"
-if ! npx playwright show-deps >/dev/null 2>&1; then
-  echo "playwright show-deps indicates missing system libraries; see .artifacts/playwright_show_deps.txt" >&2
-  echo "On Ubuntu, run: sudo apt-get update && sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libxcomposite1 libxrandr2 libxdamage1 libxkbcommon0 libgbm1 libasound2" >&2
-  exit 7
-fi
 # record installed browsers
 npx playwright install --list 2>&1 | tee "$WS/.artifacts/playwright_installed_browsers.txt" || true
 # headless chromium smoke test
